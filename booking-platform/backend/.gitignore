@@ -1,0 +1,24 @@
+# Virtual environment 
+.venv/
+venv/
+env/
+
+# Secrets - NEVER commit this 
+.env 
+
+# Python bytecode cache
+__pycache__/
+*.py[cod]
+
+#Pytest cache 
+.pytest_cache/
+.coverage
+
+# VS Code / IDE 
+.vscode/
+.idea/
+
+# Build artifacts
+*.egg-info
+dist/
+build/

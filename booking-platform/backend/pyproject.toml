@@ -1,0 +1,29 @@
+[project]
+name = "booking-platform-backend"
+version = "0.1.0"
+requires-python = ">=3.11"
+
+# Production dependencies - installed when we run : pip install -e .
+# These are like <PackageReference> entries in our .csproj in dotnet
+
+dependencies = [
+    "fastapi>=0.115.0",  # the web framework
+    "uvicorn[standard]>=0.30.0", # ASGI server (like Kestrel in .NET)
+    "sqlalchemy>=2.0.0", # ORM (like Entity Framework)
+    "alembic>=1.13.0",  # DB migrations (like EF Core migrations)
+    "psycopg2-binary>=2.9.0", # PostgreSQL driver (like Npgsql)
+    "python-jose[cryptography]>=3.3.0", # JWT Tokens
+    "passlib[bcrypt]>=1.7.4", # Password hashing (like BCrypt.NET)
+    "pydantic-settings>=2.0.0", # Reads .env into typed config (like IOptions<T>)
+    "python-multipart>=0.0.9", # Required for the form data in FastAPI
+]
+
+# Dev-only dependencies - installed with : pip install -e ".[dev]"
+# These never go to the Production
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0.0", # Test runner (like xUnit/NUnit)
+    "pytest-asyncio>=0.23.0", # Async Test Support
+    "httpx>=0.27.0", # HTTP Client used by FastAPI's TestClient
+]

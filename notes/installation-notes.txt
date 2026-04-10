@@ -1,0 +1,30 @@
+# 1. Navigate to the backend folder 
+
+cd D:\fastapi\booking-platform\backend
+
+# 2. Create the .env file from the example 
+
+copy .env.example .env
+
+# 3. Create a python virtual environment 
+
+python -m venv .venv
+
+# 4. Activate it 
+
+.venv\Scripts\activate
+
+# 5. Install all dependencies (production + dev)
+
+pip install -e ".[dev]"
+
+# 6. Start the server
+
+uvicorn main:app --reload 
+
+# -- reload means it auto-restarts when we save a file (like dotnet watch run)
+
+
+Once running , open the browser and go to 
+- http://localhost:8000/health -> should return {"status":"ok"}
+- http://localhost:8000/docs -> Swagger UI
