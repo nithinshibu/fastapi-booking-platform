@@ -1,0 +1,28 @@
+cd D:\fastapi\booking-platform\frontend
+
+npm run dev
+
+http://localhost:5173
+
+# run this from the path - Node version is v22.22.2, npm -v is 10.9.7
+
+D:\fastapi\booking-platform
+
+npm create vite@latest frontend -- --template react-ts
+
+
+Since the frontend already has some files in it , Choose Ignore files and continue.
+Vite will generate the src/App.tsx at the wrong location , delete it 
+
+cd frontend 
+del src\App.tsx 
+del src\App.css
+
+Then install dependencies 
+
+npm install 
+npm install react-router-dom axios @tanstack/react-query react-hook-form zod @hookform/resolvers
+
+then run:
+
+npm run dev
