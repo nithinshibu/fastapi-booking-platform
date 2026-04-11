@@ -28,3 +28,34 @@ uvicorn main:app --reload
 Once running , open the browser and go to 
 - http://localhost:8000/health -> should return {"status":"ok"}
 - http://localhost:8000/docs -> Swagger UI
+
+(.venv) D:\fastapi\booking-platform\backend>pg_isready 
+:5432 - accepting connections
+
+# To create the database run this command:
+
+psql -U postgres -c "CREATE DATABASE booking_platform;"
+
+# To list the dbs 
+
+psql -U postgres -l
+
+# Initialises Alembic by creating the configuration file and 
+# migration environment (folders+templates) needed to manage the database schema changes 
+
+alembic init alembic 
+
+# Run this command - generates the migration file (like dotnet ef migrations add)
+
+alembic revision --autogenerate -m "create_users_table"
+
+# Run this command - applies it to the database (like dotnet ef database update)
+
+alembic upgrade head
+
+After running both, verify with :
+
+psql -U postgres -d booking_platform -c "\dt"
+
+# we should see two tables : users and alembic_version
+
