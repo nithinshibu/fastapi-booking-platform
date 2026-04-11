@@ -1,0 +1,5 @@
+cd D:\fastapi\booking-platform\frontend
+
+npm run dev
+
+http://localhost:5173
