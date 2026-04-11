@@ -16,6 +16,7 @@ dependencies = [
     "passlib[bcrypt]>=1.7.4", # Password hashing (like BCrypt.NET)
     "pydantic-settings>=2.0.0", # Reads .env into typed config (like IOptions<T>)
     "python-multipart>=0.0.9", # Required for the form data in FastAPI
+    "email-validator>=2.0.0",  # Required for Pydantic's EmailStr field type
 ]
 
 # Dev-only dependencies - installed with : pip install -e ".[dev]"

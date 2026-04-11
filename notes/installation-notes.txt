@@ -74,5 +74,12 @@ pytest tests/test_auth.py -v
 
 # all test cases passed this time
 
+# We need to install the email-validator dependency
 
+pip install email-validator
+
+# Then start the server
+
+cd D:\fastapi\booking-platform\backend
+uvicorn main:app --reload
 

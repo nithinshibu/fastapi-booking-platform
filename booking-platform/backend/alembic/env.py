@@ -21,6 +21,11 @@ config = context.config
 if config.config_file_name is not None:
     fileConfig(config.config_file_name)
 
+
+# Add a new import line each time we create a new model file
+from app.models.user import User
+
+
 # add your model's MetaData object here
 # for 'autogenerate' support
 # from myapp import mymodel

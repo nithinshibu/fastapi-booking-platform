@@ -1,9 +1,14 @@
 from fastapi import FastAPI
 from sqlalchemy import text
+
+from app.api.v1.routes.auth import router as auth_router
 from app.db.session import engine
 
 # Think of this as the Program.cs - it creates the app and wires everything together.
-# As we add features , we will import and register more routes here.
+# Each router is registered here with include_router, equivalent to 
+# app.MapControllers() / builders.Services.AddControllers() in .NET
+# As we add features (movies,shows,bookings), we will import and register
+# their routers here in the same way.
 
 app = FastAPI(
     title="Booking Platform API",
@@ -20,6 +25,10 @@ def verify_database_connection():
     """
     with engine.connect() as connection:
         connection.execute(text("SELECT 1"))
+
+# Register routers - prefix="/api/v1" is added here , not in the router itself,
+# so the router stays reusable if we ever need to mount it at a different version.
+app.include_router(auth_router,prefix="/api/v1")
 
 
 @app.get("/health",tags=["Health"])
