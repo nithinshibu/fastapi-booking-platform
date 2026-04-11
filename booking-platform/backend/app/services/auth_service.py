@@ -79,4 +79,4 @@ def login_user(db:Session,email:str,password:str) -> str:
     # 'sub' (subject) is the standard JWT claim for identifying the principal.
     # We use email here , later we will decode this to load the current user.
 
-    return create_access_token({"sub":"user@example.com"})
+    return create_access_token({"sub":user.email})

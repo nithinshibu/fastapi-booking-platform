@@ -1,8 +1,9 @@
 from fastapi import APIRouter,Depends,HTTPException,status
+from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 
 from app.dependencies.db import get_db
-from app.schemas.auth import LoginRequest,RegisterRequest,TokenResponse,UserResponse
+from app.schemas.auth import RegisterRequest,TokenResponse,UserResponse
 from app.services.auth_service import AuthError,login_user,register_user
 
 
@@ -46,19 +47,25 @@ def register(payload:RegisterRequest,db:Session=Depends(get_db)):
 
 
 @router.post("/login",response_model=TokenResponse)
-def login(payload:LoginRequest,db:Session=Depends(get_db)):
+def login(form_data:OAuth2PasswordRequestForm = Depends(),db:Session=Depends(get_db)):
     """ 
     Authenticate a user and return a JWT Access Token.
+
+    Uses OAuth2PasswordRequestForm instead of a JSON Body.
+
+    Why the change?
+
+    The Swagger UI "Authorize" button and the OAuth2 standard both send
+    credentials as form data (application/x-www-form-urlencoded),not JSON.
+    OAuth2PasswordRequestForm is FastAPI's built-in handler for that format.
 
     On Success : returns {"access_token":"...","token_type":"bearer"}
     On Failure : returns 401 Unauthorized
 
-    The client must store this token and send it on every protected request:
-        Authorization: Bearer <access_token>
     """
 
     try:
-        token = login_user(db,email=payload.email,password=payload.password)
+        token = login_user(db,email=form_data.username,password=form_data.password)
         return TokenResponse(access_token=token)
     except AuthError as exc:
         # 401 Unauthorized - credentials are wrong or user doesn't exist
