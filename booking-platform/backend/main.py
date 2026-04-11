@@ -2,6 +2,7 @@ from fastapi import FastAPI
 from sqlalchemy import text
 
 from app.api.v1.routes.auth import router as auth_router
+from app.api.v1.routes.users import router as users_router
 from app.db.session import engine
 
 # Think of this as the Program.cs - it creates the app and wires everything together.
@@ -29,6 +30,7 @@ def verify_database_connection():
 # Register routers - prefix="/api/v1" is added here , not in the router itself,
 # so the router stays reusable if we ever need to mount it at a different version.
 app.include_router(auth_router,prefix="/api/v1")
+app.include_router(users_router,prefix="/api/v1")
 
 
 @app.get("/health",tags=["Health"])
