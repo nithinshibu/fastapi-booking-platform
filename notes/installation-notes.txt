@@ -83,3 +83,11 @@ pip install email-validator
 cd D:\fastapi\booking-platform\backend
 uvicorn main:app --reload
 
+# Now let's setup the movies table 
+cd D:\fastapi\booking-platform\backend
+
+alembic revision --autogenerate -m "create_movies_table"
+
+alembic upgrade head
+
+uvicorn main:app --reload
