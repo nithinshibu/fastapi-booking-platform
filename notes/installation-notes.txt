@@ -45,7 +45,7 @@ psql -U postgres -l
 
 alembic init alembic 
 
-# Run this command - generates the migration file (like dotnet ef migrations add)
+# Run this command (in path cd D:\fastapi\booking-platform\backend) - generates the migration file (like dotnet ef migrations add)
 
 alembic revision --autogenerate -m "create_users_table"
 
