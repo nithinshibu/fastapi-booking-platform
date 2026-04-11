@@ -59,3 +59,20 @@ psql -U postgres -d booking_platform -c "\dt"
 
 # we should see two tables : users and alembic_version
 
+# Now to run the tests to verify everything passes , 
+
+cd D:\fastapi\booking-platform\backend
+
+pytest tests/test_auth.py -v 
+
+# I faced an error here, 4 tests failed , so ran below commands and worked (as I am using Python version 3.14)
+
+pip uninstall bcrypt passlib -y
+pip install passlib==1.7.4 bcrypt==3.2.2
+
+pytest tests/test_auth.py -v
+
+# all test cases passed this time
+
+
+
