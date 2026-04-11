@@ -1,8 +1,14 @@
+from __future__ import annotations
 from datetime import date
+from typing import TYPE_CHECKING
 from sqlalchemy import Boolean,Integer,String
-from sqlalchemy.orm import Mapped,mapped_column
+from sqlalchemy.orm import Mapped,mapped_column,relationship
 
 from app.models.base import BaseModel
+
+if TYPE_CHECKING:
+    from app.models.show import Show
+
 
 class Movie(BaseModel):
     """ 
@@ -35,3 +41,11 @@ class Movie(BaseModel):
     # but we don't want to lose it data or break foreign keys in bookings.
 
     is_active: Mapped[bool] = mapped_column(Boolean,default=True,nullable=False)
+
+    # Relationship - the Python-level link to all Show rows for this movie.
+    # SQLAlchemy loads these lazily by default (only when we access .shows) .
+    # back_populates="movie" tells SQLAlchemy that Show.movie points back here.
+    # Type_CHECKING import above avoids a circular import at runtime while still
+    # giving type checkers (and IDE) full awareness of the Show type.
+
+    shows: Mapped[list[Show]] = relationship("Show",back_populates="movie")

@@ -91,3 +91,12 @@ alembic revision --autogenerate -m "create_movies_table"
 alembic upgrade head
 
 uvicorn main:app --reload
+
+# Now let's setup the shows table 
+cd D:\fastapi\booking-platform\backend
+
+alembic revision --autogenerate -m "create_shows_table"
+
+alembic upgrade head
+
+uvicorn main:app --reload

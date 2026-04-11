@@ -3,6 +3,7 @@ from sqlalchemy import text
 
 from app.api.v1.routes.auth import router as auth_router
 from app.api.v1.routes.movies import router as movies_router
+from app.api.v1.routes.shows import router as shows_router
 from app.api.v1.routes.users import router as users_router
 from app.db.session import engine
 
@@ -33,6 +34,8 @@ def verify_database_connection():
 app.include_router(auth_router,prefix="/api/v1")
 app.include_router(users_router,prefix="/api/v1")
 app.include_router(movies_router,prefix="/api/v1")
+app.include_router(shows_router,prefix="/api/v1")
+
 
 
 @app.get("/health",tags=["Health"])
