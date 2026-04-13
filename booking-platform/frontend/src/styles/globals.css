@@ -1,0 +1,153 @@
+/* 
+
+globals.css - Design System Foundation
+
+This file does two things:
+    1. Imports Tailwind CSS (gives all the utility classes: flex, p-4, rounded,etc)
+    2. Defines CSS Custom Properties - our design token system
+
+WHAT ARE CSS Custom Properties ?
+
+They are variables for CSS defined with "--name" and used with "var(--name)".
+Example: instead of hardcoding #F59E0B in 50 places , we define --color-brand once here
+and reference it everywhere.
+If we want to change the brand color - then we just have to edit one line.
+
+Why Two Systems (Tailwind + CSS variables) ?
+
+- Tailwind handles layout,spacing,responsive design (fast utility classes)
+- CSS variables handle our DESIGN TOKENS - the "meaning" layer
+  (--color-error means something; red-500 is just a color value)
+
+*/
+
+@import "tailwindcss";
+
+/* 
+
+@theme - Tailwind v4's way to extend the design system.
+Variables defined here become Tailwind utility classes automatically.
+eg: --color-brand becomes usable as bg-brand, text-brand, border-brand etc.
+
+*/
+
+/* Variables defined here become Tailwind utility classes automatically.
+   e.g., --color-brand becomes usable as bg-brand, text-brand, border-brand etc.
+*/
+@theme {
+  /* Brand colors — cinema amber/gold */
+  --color-brand: #f59e0b;
+  --color-brand-dark: #d97706;
+  --color-brand-light: #fde68a;
+
+  /* Background layers — from darkest (page bg) to lightest (elevated surfaces) */
+  --color-bg: #0f172a; /* deep navy — the page background */
+  --color-surface: #1e293b; /* cards, panels */
+  --color-surface-elevated: #334155; /* inputs, dropdowns, hover states */
+  --color-border: #475569; /* subtle dividers and outlines */
+
+  /* Text hierarchy */
+  --color-text-primary: #f8fafc; /* headings, body text */
+  --color-text-secondary: #94a3b8; /* subtitles, descriptions */
+  --color-text-muted: #64748b; /* placeholders, disabled */
+
+  /* Semantic states */
+  --color-success: #10b981; /* emerald green */
+  --color-error: #ef4444; /* red-500 */
+  --color-warning: #f59e0b; /* same as brand for this theme */
+
+  /* Typography */
+  --font-sans: "Inter", system-ui, -apple-system, sans-serif;
+
+  /* Shadows — darker than default because our backgrounds are very dark */
+  --shadow-card:
+    0 4px 6px -1px rgb(0 0 0 / 0.4), 0 2px 4px -2px rgb(0 0 0 / 0.4);
+  --shadow-modal: 0 25px 50px -12px rgb(0 0 0 / 0.7);
+}
+
+/* Base styles applied to the raw HTML elements. */
+/* @layer base lets us override browser defaults without fighting Tailwind’s reset */
+@layer base {
+  body {
+    background-color: theme(--color-bg);
+    color: theme(--color-text-primary);
+    font-family: theme(--font-sans);
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* Scrollbar styling — subtle, matches the dark theme */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: theme(--color-bg);
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: theme(--color-border);
+    border-radius: 3px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: theme(--color-text-muted);
+  }
+
+  /* Focus ring — accessible keyboard navigation indicator */
+  *:focus-visible {
+    outline: 2px solid theme(--color-brand);
+    outline-offset: 2px;
+  }
+}
+
+/* 
+   @layer components - reusuable component-level CSS classes
+   Use these for patterns that appear in many places and are too complex
+   to express cleanly as utility class combinations inline.
+*/
+@layer components {
+  /* Page-level container — constrains width and adds horizontal padding */
+  .container-page {
+    max-width: 1280px;
+    margin-inline: auto;
+    padding-inline: 1rem;
+  }
+
+  /* Card surface — used for movie cards, panels, etc. */
+  .card {
+    background-color: theme(--color-surface);
+    border-radius: 0.75rem;
+    box-shadow: theme(--shadow-card);
+  }
+
+  /* Input base styles — shared by the Input component */
+  .input-base {
+    width: 100%;
+    background-color: theme(--color-surface-elevated);
+    border: 1px solid theme(--color-border);
+    border-radius: 0.5rem;
+    padding: 0.625rem 0.875rem;
+    color: theme(--color-text-primary);
+    font-size: 0.875rem;
+    transition:
+      border-color 150ms ease,
+      box-shadow 150ms ease;
+  }
+
+  .input-base::placeholder {
+    color: theme(--color-text-muted);
+  }
+
+  .input-base:focus {
+    outline: none;
+    border-color: theme(--color-brand);
+    box-shadow: 0 0 0 3px rgb(245 158 11 / 0.15);
+  }
+
+  .input-base.input-error {
+    border-color: theme(--color-error);
+    box-shadow: 0 0 0 3px rgb(239 68 68 / 0.15);
+  }
+}
