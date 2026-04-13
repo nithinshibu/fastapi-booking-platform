@@ -26,3 +26,28 @@ npm install react-router-dom axios @tanstack/react-query react-hook-form zod @ho
 then run:
 
 npm run dev
+
+--- Tailwind CSS + CSS Custom Properties ---
+
+# cd D:\fastapi\booking-platform\frontend
+
+npm install -D tailwindcss postcss autoprefixer
+npm install -D @tailwindcss/cli
+npx tailwindcss init -p
+npm install @hookform/resolvers
+
+Design Token Palette (Cinema Dark Theme):
+
+Brand (amber/gold): #F59E0B / #D97706
+Background: #0F172A (deep slate)
+Surface (cards): #1E293B
+Surface elevated: #334155 (inputs, raised UI)
+Border: #475569
+Text primary: #F8FAFC
+Text secondary: #94A3B8
+Success: #10B981
+Error: #EF4444
+
+Run backend : cd D:\fastapi\booking-platform\backend && uvicorn main:app --reload
+Run frontend : cd D:\fastapi\booking-platform\frontend && npm run dev
+
