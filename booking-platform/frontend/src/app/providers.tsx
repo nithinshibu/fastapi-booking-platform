@@ -1,5 +1,6 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ReactNode } from "react";
+import { AuthProvider } from "../context/AuthContext";
 
 /* 
 
@@ -56,13 +57,15 @@ interface AppProvidersProps {
 AppProviders wraps the entire app so every component has access to React Query's cache
 via hooks (useQuery, useMutation, etc..)
 
-We will add AuthProvider here later once the auth context is built.
+Provider ORDER matters - outer provider are available to inner ones.
 
 */
 
 export function AppProviders({ children }: AppProvidersProps) {
   return (
-    <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+    <QueryClientProvider client={queryClient}>
+      <AuthProvider>{children}</AuthProvider>
+    </QueryClientProvider>
   );
 }
 
