@@ -26,6 +26,7 @@ if config.config_file_name is not None:
 from app.models.user import User
 from app.models.movie import Movie
 from app.models.show import Show
+from app.models.refresh_token import RefreshToken
 
 # add your model's MetaData object here
 # for 'autogenerate' support

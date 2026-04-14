@@ -58,10 +58,29 @@ class TokenResponse(BaseModel):
     """
     Returned after a successful login.
 
+    Now contains BOTH tokens:
+    - access_token  ->  short-lived JWT (15 min),sent on every API request.
+    - refresh_token ->  long lived opaque string (7 days) used only to get
+                        a new access_token when the current one expires.
+    
+    The frontend stores both. The access token goes in the Authorization header.
+    The refresh token is stored securely and only used at /auth/refresh.
+
     'token_type: bearer' is the OAuth2 standard - client must send the token
     in the Authorization header as : Bearer <access_token> 
 
     """
     access_token:str
+    refresh_token:str
     token_type: str = "bearer"
 
+class RefreshRequest(BaseModel):
+    """ 
+    Payload for POST /auth/refresh and POST /auth/logout
+
+    The client sends back the refresh token it received at login.
+    The server validates it, then either issues new tokens (refresh)
+    or revokes it (logout).
+
+    """
+    refresh_token : str

@@ -1,0 +1,55 @@
+cd D:\fastapi\booking-platform\frontend
+
+npm run dev
+
+http://localhost:5173
+
+# run this from the path - Node version is v22.22.2, npm -v is 10.9.7
+
+D:\fastapi\booking-platform
+
+npm create vite@latest frontend -- --template react-ts
+
+
+Since the frontend already has some files in it , Choose Ignore files and continue.
+Vite will generate the src/App.tsx at the wrong location , delete it 
+
+cd frontend 
+del src\App.tsx 
+del src\App.css
+
+Then install dependencies 
+
+npm install 
+npm install react-router-dom axios @tanstack/react-query react-hook-form zod @hookform/resolvers
+
+then run:
+
+npm run dev
+
+--- Tailwind CSS + CSS Custom Properties ---
+
+# cd D:\fastapi\booking-platform\frontend
+
+npm install -D tailwindcss postcss autoprefixer
+npm install -D @tailwindcss/cli
+npx tailwindcss init -p
+npm install @hookform/resolvers
+
+Design Token Palette (Cinema Dark Theme):
+
+Brand (amber/gold): #F59E0B / #D97706
+Background: #0F172A (deep slate)
+Surface (cards): #1E293B
+Surface elevated: #334155 (inputs, raised UI)
+Border: #475569
+Text primary: #F8FAFC
+Text secondary: #94A3B8
+Success: #10B981
+Error: #EF4444
+
+Run backend : cd D:\fastapi\booking-platform\backend && .venv\Scripts\activate && uvicorn main:app --reload
+Run frontend : cd D:\fastapi\booking-platform\frontend && npm run dev
+
+I faced an issue with tailwindcss regarding "@tailwindcss/postcss"
+npm install -D @tailwindcss/postcss

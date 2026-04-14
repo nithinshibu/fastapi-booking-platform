@@ -1,4 +1,5 @@
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import text
 
 from app.api.v1.routes.auth import router as auth_router
@@ -18,6 +19,31 @@ app = FastAPI(
     description = "Movie and Event Booking Platform - Learning Project",
     version = "1.0.0"
 )
+
+# CORS (Cross Origin Resource Sharing) - MUST be added before any routes 
+
+""" 
+
+Without this, the browser refuses to send requests from http://localhost:5173 (our React app)
+to http://localhost:8000 (FastAPI) because they are on different ports, 
+which counts as a different origin.
+
+# allow_origins: which domains can call this API (Vite dev server uses port 5173)
+# allow_credentials: needed if you ever send cookies (good to have on)
+# allow_methods: which HTTP methods are permitted
+# allow_headers: which request headers are allowed (Authorization is required for JWT)
+
+"""
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins= ["http://localhost:5173"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers = ["*"]
+)
+
+
 
 @app.on_event("startup")
 def verify_database_connection():

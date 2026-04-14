@@ -100,3 +100,28 @@ alembic revision --autogenerate -m "create_shows_table"
 alembic upgrade head
 
 uvicorn main:app --reload
+
+For the conftest, 
+
+psql -U postgres
+CREATE DATABASE booking_platform_test;
+Now to exit : \q
+
+pip install httpx
+
+cd D:\fastapi\booking-platform\backend
+
+python -m pytest tests/test_routes_auth.py -v 
+
+-- creates the refresh_tokens table in db
+
+cd D:\fastapi\booking-platform\backend
+
+alembic revision --autogenerate -m "add_refresh_tokens_table"
+
+alembic upgrade head
+
+python -m pytest tests/test_routes_auth.py -v
+
+Run backend : cd D:\fastapi\booking-platform\backend && .venv\Scripts\activate && uvicorn main:app --reload
+Run frontend : cd D:\fastapi\booking-platform\frontend && npm run dev
