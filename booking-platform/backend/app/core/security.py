@@ -1,3 +1,5 @@
+import hashlib
+import secrets
 from datetime import datetime,timedelta,timezone
 from typing import Any
 
@@ -62,6 +64,49 @@ def create_access_token(data:dict[str,Any],expires_delta:timedelta | None = None
     expire = datetime.now(timezone.utc) + (expires_delta or timedelta(minutes=settings.ACCESS_TOKEN_EXPIRE_MINUTES))
     to_encode["exp"] = expire
     return jwt.encode(to_encode,settings.SECRET_KEY,algorithm=settings.ALGORITHM)
+
+
+def generate_refresh_token() -> str:
+    """ 
+    Generate a cryptographically secure random token string.
+    secrets.token_urlsafe(64) produces a 64 random bytes encoded as URL-safe
+    base64 - giving an 86 character string with ~512 bits of entropy.
+
+    Why not a JWT for refresh tokens ?
+
+    -   JWT are self validating => we don't need a DB lookup to verify them.
+        That's great for access tokens (performance) but terrible for refresh tokens
+        (we can't revoke them without a blocklist, which defeats the point).
+    
+    An opaque token MUST be looked up in the DB on every use. That lookup is what
+    enables revocation - we just set is_revoked=True and the token is dead immediately.
+
+    """
+    return secrets.token_urlsafe(64)
+
+def hash_refresh_token(token:str) -> str:
+    """ 
+    Hash a refresh token with SHA-256 before storing it in the database.
+
+    WHY HASH?
+
+    Same reason we hash passwords - defence in depth.
+    If the database is ever read by an attacker (SQL injection, backup leak),
+    they get hashes, not usable tokens. They cannot call /auth/refresh with a hash.
+
+    Why SHA-256 (not bcrypt like passwords) ?
+    -   Refresh tokens are already random (high entropy) - no need for a slow
+        algorithm to defend against dictionary attacks. SHA-256 is fast and sufficient.
+        bcrypt is slow BY DESIGN to restrict brute-force on low-entropy inputs (passwords).
+        A 512 bits random token cannot be brute-forced regardless of algorithm speed.
+
+    Returns a 64-character lowercase hex string.    
+
+    """
+    return hashlib.sha256(token.encode()).hexdigest()
+
+
+
 
 def decode_access_token(token:str) -> dict[str,Any] | None:
     """ 

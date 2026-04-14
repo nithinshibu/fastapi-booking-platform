@@ -1,8 +1,22 @@
+/* 
+
+AuthContext.tsx - Global Authentication State
+
+WHAT CHANGED FOR REFRESH TOKENS:
+- login() now saves BOTH access_token and refresh_token to localStorage
+- logout() calls the server first to revoke the refresh token, THEN clears
+      local state (ensures the server side session is ended)
+- Session restore : on page load, if the access token is expired the apiClient
+  interceptor will automatically refresh it - no extra logic needed here
+
+*/
+
+
 import { createContext, useContext, useEffect, useState } from "react";
 import type { ReactNode } from "react";
 import * as authService from "../features/auth/services/authService";
 import type { UserResponse, LoginRequest } from "../features/auth/types";
-import { TOKEN_KEY, USER_KEY } from "../constants";
+import { TOKEN_KEY,REFRESH_TOKEN_KEY, USER_KEY } from "../constants";
 
 // ---- Type Definition ----
 
@@ -26,7 +40,7 @@ export interface AuthContextType {
   login: (credentials: LoginRequest) => Promise<void>;
 
   // Log out: clears stored data and resets state
-  logout: () => void;
+  logout: () => Promise<void>;
 }
 
 // ---- Context Object ----
@@ -87,13 +101,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         // Token exists - verify it's still valid by fetching the user profile.
         // The appClient interceptor automatically attaches the token to this request.
         const currentUser = await authService.getMe();
-        setToken(storedToken);
+        setToken(localStorage.getItem(TOKEN_KEY)); //may have been refreshed by interceptor
         setUser(currentUser);
       } catch {
         // Token is expired or invalid - clean up and start fresh.
         // The 401 interceptor in apiClient will also fire , but we handle it here too
         // to ensure clean state before isLoading becomes false
         localStorage.removeItem(TOKEN_KEY);
+        localStorage.removeItem(REFRESH_TOKEN_KEY);
         localStorage.removeItem(USER_KEY);
       } finally {
         //Always set isLoading to false when done, whether success or failure.
@@ -107,7 +122,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // ---- login ----
   /* 
   
-  Called by LoginPage. 
+  Called by LoginPage. NOW SAVED BOTH TOKENS
   Steps:
     1. Call the API to exchange credentials for a token.
     2. Save the token to localStorage (persists across refreshes)
@@ -122,6 +137,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const login = async (credentials: LoginRequest) => {
     const tokenResponse = await authService.login(credentials);
     localStorage.setItem(TOKEN_KEY, tokenResponse.access_token);
+    localStorage.setItem(REFRESH_TOKEN_KEY, tokenResponse.refresh_token);
 
     const currentUser = await authService.getMe();
     localStorage.setItem(USER_KEY, JSON.stringify(currentUser));
@@ -135,9 +151,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   Clears everything. The appClient interceptor redirects to /login on 401,
   but this is the explicit logout - called by the Navbar's Sign Out button.
 
+  Two-step logout:
+  1. Tell the server to revoke the refresh token (server side session ended)
+  2. Clear local storage and reset React state.
+
+  Step 1 can fail (network issue, token already expired) - we always 
+  proceed to step 2 regardless , because the user's intent is to log out.
+  Even a failed server call means the session will expire naturally.
+
   */
-  const logout = () => {
+  const logout = async () => {
+
+    const storedRefreshToken = localStorage.getItem(REFRESH_TOKEN_KEY)
+
+    if(storedRefreshToken){
+      try{
+        await authService.logoutApi(storedRefreshToken)
+      }catch{
+        // Ignore errors - proceed to local clean up regardless
+      }
+    }
+
     localStorage.removeItem(TOKEN_KEY);
+    localStorage.removeItem(REFRESH_TOKEN_KEY);
     localStorage.removeItem(USER_KEY);
     setToken(null);
     setUser(null);

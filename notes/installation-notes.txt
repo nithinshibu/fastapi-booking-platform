@@ -113,4 +113,15 @@ cd D:\fastapi\booking-platform\backend
 
 python -m pytest tests/test_routes_auth.py -v 
 
+-- creates the refresh_tokens table in db
 
+cd D:\fastapi\booking-platform\backend
+
+alembic revision --autogenerate -m "add_refresh_tokens_table"
+
+alembic upgrade head
+
+python -m pytest tests/test_routes_auth.py -v
+
+Run backend : cd D:\fastapi\booking-platform\backend && .venv\Scripts\activate && uvicorn main:app --reload
+Run frontend : cd D:\fastapi\booking-platform\frontend && npm run dev

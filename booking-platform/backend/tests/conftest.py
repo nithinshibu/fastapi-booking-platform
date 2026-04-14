@@ -33,9 +33,10 @@ from app.dependencies.db import get_db
 # Import every model so SQLAlchemy registers them on Base.metadata.
 # Without these imports, Base.metadata.create_all() won't know about the tables.
 # This is the same reason alembic/env.py imports all models.
-from app.models.user import User   # noqa: F401
-from app.models.movie import Movie # noqa: F401
-from app.models.show import Show   # noqa: F401
+from app.models.user import User  # noqa: F401
+from app.models.movie import Movie  # noqa: F401
+from app.models.show import Show  # noqa: F401
+from app.models.refresh_token import RefreshToken
 
 from main import app
 
@@ -70,6 +71,7 @@ TestingSessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engin
 # Before all tests: create every table defined in our models.
 # After all tests: drop every table (clean up the test database).
 
+
 # .NET equivalent: [AssemblyInitialize] — setup that runs once before all tests.
 @pytest.fixture(scope="session", autouse=True)
 def create_test_tables():
@@ -90,6 +92,7 @@ def create_test_tables():
 # Our repository layer calls db.commit() which permanently writes to the DB.
 # A session.rollback() can only undo uncommitted changes.
 # Deleting all rows is simpler and works regardless of commit history.
+
 
 # .NET equivalent: [TestCleanup] that calls dbContext.Database.EnsureDeleted()
 @pytest.fixture()
@@ -122,6 +125,7 @@ def db_session():
 #     services.RemoveAll<IDbContext>();
 #     services.AddScoped<IDbContext>(_ => testDbContext);
 # })
+
 
 @pytest.fixture()
 def client(db_session):
