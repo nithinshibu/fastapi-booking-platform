@@ -32,7 +32,7 @@ interface ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
 // using Tailwind CSS with our custom color tokens from globals.css
 const variantClasses: Record<NonNullable<ButtonProps["variant"]>, string> = {
   primary:
-    "bg-[--color-brand] text-slate-900 font-semibold hover:bg-[--color-brand-dark] active:scale-[0.98]",
+    "bg-[--color-brand] text-[--color-text-primary] font-semibold hover:bg-[--color-brand-dark] active:scale-[0.98]",
   secondary:
     "bg-[--color-surface-elevated] text-[--color-text-primary] border border-[--color-border] hover:bg-slate-600 hover:border-slate-500 active:scale-[0.98]",
   danger: "bg-red-600 text-white hover:bg-red-700 active:scale-[0.98]",

@@ -48,6 +48,8 @@ Text secondary: #94A3B8
 Success: #10B981
 Error: #EF4444
 
-Run backend : cd D:\fastapi\booking-platform\backend && uvicorn main:app --reload
+Run backend : cd D:\fastapi\booking-platform\backend && .venv\Scripts\activate && uvicorn main:app --reload
 Run frontend : cd D:\fastapi\booking-platform\frontend && npm run dev
 
+I faced an issue with tailwindcss regarding "@tailwindcss/postcss"
+npm install -D @tailwindcss/postcss

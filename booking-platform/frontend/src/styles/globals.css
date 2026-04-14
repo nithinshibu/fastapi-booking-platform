@@ -150,4 +150,17 @@ eg: --color-brand becomes usable as bg-brand, text-brand, border-brand etc.
     border-color: theme(--color-error);
     box-shadow: 0 0 0 3px rgb(239 68 68 / 0.15);
   }
+
+  /* Brand badge — for year, tags, etc. */
+  .badge-brand {
+    background-color: theme(--color-brand);
+    color: theme(--color-text-primary);
+    font-weight: 600;
+    font-size: 0.75rem;
+    padding: 0.125rem 0.5rem;
+    border-radius: 9999px;
+    display: inline-block;
+    line-height: 1.2;
+  }
+  /* Usage: <span class="badge-brand">2010</span> */
 }

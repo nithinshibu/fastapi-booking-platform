@@ -54,9 +54,7 @@ export function MovieCard({ movie }: MovieCardProps) {
             </span>
 
             {/* Year badge */}
-            <span className="text-xs bg-[--color-brand] text-slate-900 font-semibold px-2 py-0.5 rounded-full">
-              {year}
-            </span>
+            <span className="badge-brand">{year}</span>
           </div>
         </div>
       </article>

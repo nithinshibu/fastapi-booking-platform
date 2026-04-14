@@ -88,9 +88,7 @@ export function MovieDetailPage() {
             </span>
 
             {movie.is_active && (
-              <span className="badge bg-[--color-brand] text-slate-900 font-semibold">
-                Now Showing
-              </span>
+              <span className="badge-brand">Now Showing</span>
             )}
           </div>
 
