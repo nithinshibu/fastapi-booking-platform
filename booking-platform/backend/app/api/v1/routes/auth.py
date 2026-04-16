@@ -1,10 +1,10 @@
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, Response, status
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 
+from app.core.config import settings
 from app.dependencies.db import get_db
 from app.schemas.auth import (
-    RefreshRequest,
     RegisterRequest,
     TokenResponse,
     UserResponse,
@@ -26,6 +26,15 @@ from app.services.auth_service import (
 # tags=["Auth"]     -> groups these routes under an "Auth" section in Swagger UI
 
 router = APIRouter(prefix="/auth", tags=["Auth"])
+
+# Cookie settings used on every set_cookie / delete_cookie call.
+# Centralised here so login and refresh always use identical parameters -
+# the browser matches cookies by name + path + domain + secure + samesite,
+# so mismatched params on delete_cookie would silently fail to clear the cookie.
+
+_COOKIE_KWARGS = dict(
+    key="refresh_token", httponly=True, samesite="lax", path="/api/v1/auth"
+)
 
 
 @router.post(
@@ -62,10 +71,12 @@ def register(payload: RegisterRequest, db: Session = Depends(get_db)):
 
 @router.post("/login", response_model=TokenResponse)
 def login(
-    form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)
+    response: Response,
+    form_data: OAuth2PasswordRequestForm = Depends(),
+    db: Session = Depends(get_db),
 ):
     """
-    Authenticate a user and return BOTH tokens.
+    Authenticate a user and return the access token in the response body.
 
     Uses OAuth2PasswordRequestForm instead of a JSON Body.
 
@@ -75,17 +86,32 @@ def login(
     credentials as form data (application/x-www-form-urlencoded),not JSON.
     OAuth2PasswordRequestForm is FastAPI's built-in handler for that format.
 
-    Response now contains:
+    The refresh token is set as an HttpOnly cookie - it is NOT in the json body.
+    The browser stores and sends it automatically;
+    Javascript cannot read it:
+
+    Response body:
             access_token - short lived JWT,attach to every API request.
-            refresh_token - long lived opaque string, stored securely, we use only at /refresh
             token_type - bearer (OAuth2 standard)
+
+    Set-Cookie header:
+            refresh_token - long lived opaque token, HttpOnly, SameSite=Lax
 
     On Failure : returns 401 Unauthorized
 
     """
 
     try:
-        return login_user(db, email=form_data.username, password=form_data.password)
+        token_response, plain_refresh_token = login_user(
+            db, email=form_data.username, password=form_data.password
+        )
+        response.set_cookie(
+            **_COOKIE_KWARGS,
+            value=plain_refresh_token,
+            secure=settings.COOKIE_SECURE,
+            max_age=settings.REFRESH_TOKEN_EXPIRE_DAYS * 86_400,
+        )
+        return token_response
 
     except AuthError as exc:
         # 401 Unauthorized - credentials are wrong or user doesn't exist
@@ -99,24 +125,42 @@ def login(
 
 
 @router.post("/refresh", response_model=TokenResponse)
-def refresh(payload: RefreshRequest, db: Session = Depends(get_db)):
+def refresh(request: Request, response: Response, db: Session = Depends(get_db)):
     """
-    Exchange a valid refresh token for a new access token + new refresh token.
+    Exchange the refresh token cookie for a new access token + rotated refresh token.
 
     TOKEN Rotation happens here:
     - The submitted refresh token is REVOKED.
-    - A brand new token pair is issued.
+    - A brand new token pair is issued (new access token in body , new refresh cookie).
 
     This endpoint is called automatically by the frontend when the access token expires (typically
     a 401 response triggers a slient refresh attempt).
     The user never sees this - it happens in the Axios response interceptor.
 
-    Returns 401 if the token is invalid,revoked or expired.
+    Returns 401 if the cookie is missing,revoked or expired.
     Returns 200 with a new TokenResponse on success.
 
     """
+
+    plain_refresh_token = request.cookies.get("refresh_token")
+    if not plain_refresh_token:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Missing refresh token",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
     try:
-        return refresh_user(db, plain_refresh_token=payload.refresh_token)
+        token_response, new_plain_refresh_token = refresh_user(
+            db, plain_refresh_token=plain_refresh_token
+        )
+        response.set_cookie(
+            **_COOKIE_KWARGS,
+            value=new_plain_refresh_token,
+            secure=settings.COOKIE_SECURE,
+            max_age=settings.REFRESH_TOKEN_EXPIRE_DAYS * 86_400,
+        )
+        return token_response
     except AuthError as exc:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -126,11 +170,14 @@ def refresh(payload: RefreshRequest, db: Session = Depends(get_db)):
 
 
 @router.post("/logout", status_code=status.HTTP_204_NO_CONTENT)
-def logout(payload: RefreshRequest, db: Session = Depends(get_db)):
+def logout(request: Request, response: Response, db: Session = Depends(get_db)):
     """
-    Revoke the refresh token , ending the session server-side.
+    Revoke the refresh token cookie, ending the session server-side.
 
     Returns 204 No Content on success - no body needed, the action is complete.
+
+    The cookie is always cleared in the response , even if the token was already
+    revoked or the cookie was absent - so the client ends up logged out regardless.
 
     Why 204 and not 200 ?
 
@@ -145,9 +192,15 @@ def logout(payload: RefreshRequest, db: Session = Depends(get_db)):
     is an accepted trade-off, instant revocation would require a Redis block list.
 
     """
-    try:
-        logout_user(db, plain_refresh_token=payload.refresh_token)
-    except AuthError:
-        # Be lenient on logout - if the token is already gone, that is fine.
-        # The user's intent (end the session) is effectively achieved either way
-        pass
+    plain_refresh_token = request.cookies.get("refresh_token")
+    if plain_refresh_token:
+        try:
+            logout_user(db, plain_refresh_token=plain_refresh_token)
+        except AuthError:
+            # Be lenient on logout - if the token is already gone, that is fine.
+            # The user's intent (end the session) is effectively achieved either way
+            pass
+
+    # Always delete the cookie. Must pass the same path/httponly/secure/samesite
+    # that were used setting it - otherwise the browser won't match it.
+    response.delete_cookie(**_COOKIE_KWARGS, secure=settings.COOKIE_SECURE)

@@ -2,12 +2,14 @@
 
 AuthContext.tsx - Global Authentication State
 
-WHAT CHANGED FOR REFRESH TOKENS:
-- login() now saves BOTH access_token and refresh_token to localStorage
-- logout() calls the server first to revoke the refresh token, THEN clears
-      local state (ensures the server side session is ended)
-- Session restore : on page load, if the access token is expired the apiClient
-  interceptor will automatically refresh it - no extra logic needed here
+The refresh token is now an HttpOnly Cookie - the browser manages it entirely.
+This context only tracks the access token and user profile in localStorage.
+
+    - login()  saves only the access token. The browser stores the refresh cookie.
+    - logout() calls the server to revoke the refresh cookie, then clears local state.
+    - Session restore : on page load , if the access token is expired the apiClient
+      interceptor automatically calls /auth/refresh (cookie sent by browser),
+      updates localStorage with the new access token and retries - transparently.
 
 */
 
@@ -16,7 +18,7 @@ import { createContext, useContext, useEffect, useState } from "react";
 import type { ReactNode } from "react";
 import * as authService from "../features/auth/services/authService";
 import type { UserResponse, LoginRequest } from "../features/auth/types";
-import { TOKEN_KEY,REFRESH_TOKEN_KEY, USER_KEY } from "../constants";
+import { TOKEN_KEY, USER_KEY } from "../constants";
 
 // ---- Type Definition ----
 
@@ -108,7 +110,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         // The 401 interceptor in apiClient will also fire , but we handle it here too
         // to ensure clean state before isLoading becomes false
         localStorage.removeItem(TOKEN_KEY);
-        localStorage.removeItem(REFRESH_TOKEN_KEY);
         localStorage.removeItem(USER_KEY);
       } finally {
         //Always set isLoading to false when done, whether success or failure.
@@ -121,23 +122,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   // ---- login ----
   /* 
-  
-  Called by LoginPage. NOW SAVED BOTH TOKENS
-  Steps:
-    1. Call the API to exchange credentials for a token.
-    2. Save the token to localStorage (persists across refreshes)
-    3. Call /users/me to get the user profile and save it
-    4. Update React State - everything re-renders with the new user.
-
-  Note: we throw on error so LoginPage can catch it and show the error message.
-  This keeps error display logic in the UI Layer , not here.
+  Saves only the access token. The refresh token arrives as an HttpOnly cookie
+  (Set-Cookie header) - the browser stores it automatically. We never see it.
   
   */
 
   const login = async (credentials: LoginRequest) => {
     const tokenResponse = await authService.login(credentials);
     localStorage.setItem(TOKEN_KEY, tokenResponse.access_token);
-    localStorage.setItem(REFRESH_TOKEN_KEY, tokenResponse.refresh_token);
 
     const currentUser = await authService.getMe();
     localStorage.setItem(USER_KEY, JSON.stringify(currentUser));
@@ -152,28 +144,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   but this is the explicit logout - called by the Navbar's Sign Out button.
 
   Two-step logout:
-  1. Tell the server to revoke the refresh token (server side session ended)
+  1. Tell the server to revoke the refresh token cookie (server side session ended)
   2. Clear local storage and reset React state.
 
-  Step 1 can fail (network issue, token already expired) - we always 
+  Step 1 can fail (network issue, cookie already expired) - we always 
   proceed to step 2 regardless , because the user's intent is to log out.
-  Even a failed server call means the session will expire naturally.
+  The server also clears the cookie in its response unconditionally.
 
   */
   const logout = async () => {
 
-    const storedRefreshToken = localStorage.getItem(REFRESH_TOKEN_KEY)
-
-    if(storedRefreshToken){
       try{
-        await authService.logoutApi(storedRefreshToken)
+        await authService.logoutApi()
       }catch{
         // Ignore errors - proceed to local clean up regardless
       }
-    }
 
     localStorage.removeItem(TOKEN_KEY);
-    localStorage.removeItem(REFRESH_TOKEN_KEY);
     localStorage.removeItem(USER_KEY);
     setToken(null);
     setUser(null);

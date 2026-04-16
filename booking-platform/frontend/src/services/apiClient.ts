@@ -1,11 +1,15 @@
 import axios from "axios";
 import type { AxiosError } from "axios";
 import { API_URL } from "../config/env";
-import { TOKEN_KEY, REFRESH_TOKEN_KEY, USER_KEY } from "../constants";
+import { TOKEN_KEY, USER_KEY } from "../constants";
 
 // Create a single shared Axios instance for the entire app.
 
 /* 
+
+withCredentials: true - tells the browser to include cookies (including the HttpOnly 
+refresh_token cookie) on every request made through this instance.
+Without this, the browser strips cookies from cross-origin requests.
 
 .NET equivalent : a named HttpClient registered in DI with a base address and a custom
 DelegatingHandler that attaches the auth header.
@@ -22,17 +26,14 @@ const apiClient = axios.create({
   headers: {
     "Content-Type": "application/json",
   },
+  withCredentials: true
 });
 
 // ---------- Request Interceptor ----------
 
 /* 
 
-Runs before every outgoing request - reads the token from localStorage and attaches it to the Authorization header.
-
-Why localStorage ?
-It persists across browser refreshes, unlike in-memory state.
-Trade-off : less secure than httpOnly cookies (vulnerable to XSS) , but simpler for a learning project.
+Attaches the access token to every outgoing request.
 
 */
 
@@ -62,17 +63,15 @@ Interceptors live outside the React components , so hooks (including useNavigate
 window.location.href is a hard browser redirect - it also clears all React state, which is exactly what we want on logout.
 
 WHAT CHANGED:
-On a 401 , we now attempt a silent token refresh BEFORE giving up.
+On a 401 , we attempt a silent token refresh BEFORE giving up.
 
 SILENT REFRESH FLOW:
 
         Request => 401 (access token expired)
         ↓
-        Read refresh_token from localStorage
+        POST /auth/refresh (refresh_token cookie sent automatically by browser)
         ↓
-        POST /auth/refresh {refresh_token}
-        ↓
-        Success => save new access token + refresh token => Retry original request
+        Success => save new access token  => Retry original request
         Failure => clear storage => redirect to /login (session truly ended)
 
 The user never sees a login prompt - from their perspective the API call 
@@ -109,7 +108,6 @@ function processQueue(error: unknown, newToken: string | null) {
 
 function clearAuthAndRedirect() {
   localStorage.removeItem(TOKEN_KEY);
-  localStorage.removeItem(REFRESH_TOKEN_KEY);
   localStorage.removeItem(USER_KEY);
   window.location.href = "/login";
 }
@@ -128,13 +126,7 @@ apiClient.interceptors.response.use(
       return Promise.reject(error);
     }
 
-    const storedRefreshToken = localStorage.getItem(REFRESH_TOKEN_KEY);
 
-    // No refresh toke in storage - can't refresh , must log in
-    if (!storedRefreshToken) {
-      clearAuthAndRedirect();
-      return Promise.reject(error);
-    }
 
     // If a refresh is already in flight , queue this request to wait for it
     if (_isRefreshing) {
@@ -155,18 +147,21 @@ apiClient.interceptors.response.use(
 
     try {
       //Use raw axios (not apiClient) to avoid trigerring this interceptor again.
+      /* 
+      withCredentials: true is required here because raw axios does not inherit the
+      instance level config and we must set it explicitly on this call 
+      so the browser sends the HttpOnly refresh_token cookie.
+      */
       const response = await axios.post<{
-        access_token: string;
-        refresh_token: string;
-      }>(`${API_URL}/auth/refresh`, {
-        refresh_token: storedRefreshToken,
-      });
+        access_token: string
+      }>(`${API_URL}/auth/refresh`, {} // empty body - the cookie carries the refresh token
+        , { withCredentials: true }
+      );
 
-      const { access_token, refresh_token: newRefreshToken } = response.data
+      const { access_token } = response.data
 
-      // Save the new tokens
+      // Save the new access token
       localStorage.setItem(TOKEN_KEY, access_token)
-      localStorage.setItem(REFRESH_TOKEN_KEY, newRefreshToken)
 
       // Update the default header so future requests use the new token
       apiClient.defaults.headers.common["Authorization"] = `Bearer ${access_token}`

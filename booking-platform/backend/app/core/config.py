@@ -1,20 +1,20 @@
 from pydantic_settings import BaseSettings
 
+
 class Settings(BaseSettings):
-    """ 
+    """
     Application configuration loaded from the .env file.
 
     Think of this as your appsettings.json in a dotnet project  , bound to a typed class (IOptions<T>).
 
-    Pydantic validates each value on startup - 
+    Pydantic validates each value on startup -
     if the DATABASE_URL is missing , then the app wouldn't start, which is exactly the behavior we want.
 
     """
 
-    DATABASE_URL:str
-    SECRET_KEY:str
-    ALGORITHM:str = "HS256"
-
+    DATABASE_URL: str
+    SECRET_KEY: str
+    ALGORITHM: str = "HS256"
 
     """ 
 
@@ -24,7 +24,7 @@ class Settings(BaseSettings):
     The refresh token quietly issues a new access token before it expires , so users never notice.
 
     """
-    ACCESS_TOKEN_EXPIRE_MINUTES: int =30
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
 
     """ 
     Refresh token live much longer - 7 days is the common default.
@@ -34,6 +34,9 @@ class Settings(BaseSettings):
 
     """
     REFRESH_TOKEN_EXPIRE_DAYS: int = 7
+
+    # Set to True in production (requires HTTPS). False is fine for local HTTP dev.
+    COOKIE_SECURE: bool = False
 
     class Config:
         env_file = ".env"

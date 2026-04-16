@@ -12,8 +12,11 @@ export interface LoginRequest {
 
 export interface TokenResponse {
   access_token: string;
-  refresh_token: string;
   token_type: string;
+  /* 
+  refresh token is no longer need in the response body as it is delivered as an
+  HttpOnly cookie (Set-Cookie header) and managed entirely by the browser.
+  */
 }
 
 export interface UserResponse {

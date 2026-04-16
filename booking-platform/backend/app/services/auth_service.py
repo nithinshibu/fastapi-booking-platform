@@ -1,8 +1,14 @@
-from datetime import datetime,timedelta,timezone
+from datetime import datetime, timedelta, timezone
 from sqlalchemy.orm import Session
 
 from app.core.config import settings
-from app.core.security import create_access_token,generate_refresh_token,hash_refresh_token,hash_password,verify_password
+from app.core.security import (
+    create_access_token,
+    generate_refresh_token,
+    hash_refresh_token,
+    hash_password,
+    verify_password,
+)
 from app.models.user import User
 from app.models.refresh_token import RefreshToken
 from app.repositories import user_repository
@@ -35,22 +41,23 @@ Validate means : hash exists in DB , not revoked , not expired.
 #           - How to read / write into the DB   -> handles this in the user_repository.py
 #           - How to format the HTTP reponse    -> handled in the route
 
+
 class AuthError(Exception):
-    """ 
+    """
     Raised when authentication or registration fails for a known business reason.
 
-    Using a custom exception type instead of returning None or a bool means 
+    Using a custom exception type instead of returning None or a bool means
     the route can catch it and decide the HTTP status code - the service itself
     stays HTTP-agnostic (The code is independent of HTTP details (like status codes or requests) and focuses only on business logic.).
     This follows the same pattern as throwing a custom domain exception in .NET and catching it in a controller action filter.
 
     """
+
     pass
 
 
-
-def register_user(db:Session,email:str,password:str) -> User:
-    """ 
+def register_user(db: Session, email: str, password: str) -> User:
+    """
     Register a new user account.
 
     Business rules enforced here:
@@ -61,16 +68,16 @@ def register_user(db:Session,email:str,password:str) -> User:
     Raises AuthError if the email is already registered.
 
     """
-    existing_user = user_repository.get_by_email(db,email)
+    existing_user = user_repository.get_by_email(db, email)
     if existing_user:
         raise AuthError("Email already registered")
-    
+
     hashed = hash_password(password)
-    return user_repository.create(db,email=email,hashed_password=hashed)
+    return user_repository.create(db, email=email, hashed_password=hashed)
 
 
-def _create_token_pair(db:Session,user:User) -> TokenResponse:
-    """ 
+def _create_token_pair(db: Session, user: User) -> tuple[TokenResponse, str]:
+    """
     Private helper : create an access token + refresh token for a user.
     Extracted into a helper because both login_user() and refresh_user()
     need to issue a new token pair - DRY principle.
@@ -79,16 +86,21 @@ def _create_token_pair(db:Session,user:User) -> TokenResponse:
     signals "internal use only".
     Callers use login_user() or refresh_user().
 
+    Returns a tuple of (TokenResponse,plain_refresh_token).
+    The route receives the plain refresh token and sets it as an HttpOnly cookie.
+    The TokenResponse contains only the access token - the refresh token is
+    never included in the JSON body.
+
     Steps :
     1. Create a short lived JWT Access Token.
     2. Generate an opaque random refresh token string.
     3. Hash the refresh token
     4. Store the hash in the DB with an expiry.
-    5. Return BOTH tokens (the plain refresh token, never the hash)
+    5. Return BOTH tokens (TokenResponse for the body,plain_refresh_token for the cookie)
 
     """
     # 1. Access Token - JWT , stateless , short lived
-    access_token = create_access_token({"sub":user.email})
+    access_token = create_access_token({"sub": user.email})
 
     # 2. Refresh Token - opaque random string , stateful (stored in DB)
     plain_refresh_token = generate_refresh_token()
@@ -98,22 +110,19 @@ def _create_token_pair(db:Session,user:User) -> TokenResponse:
 
     # 4. Persist the hash (not the plain token)
     expires_at = datetime.now(timezone.utc) + timedelta(
-        days = settings.REFRESH_TOKEN_EXPIRE_DAYS
+        days=settings.REFRESH_TOKEN_EXPIRE_DAYS
     )
 
     refresh_token_repository.create(
-        db,
-        user_id=user.id,
-        token_hash=token_hash,
-        expires_at=expires_at
+        db, user_id=user.id, token_hash=token_hash, expires_at=expires_at
     )
-    # 5. Return the plain token to the caller (who returns it to the client)
+    # 5. Return the plain token alongside the response so the route can set the cookie.
     # The plain token is never stored - only the hash is in the DB
-    return TokenResponse(access_token=access_token,refresh_token=plain_refresh_token)
+    return TokenResponse(access_token=access_token), plain_refresh_token
 
 
-def login_user(db:Session,email:str,password:str) -> TokenResponse:
-    """ 
+def login_user(db: Session, email: str, password: str) -> tuple[TokenResponse, str]:
+    """
     Authenticate a user and return a token pair (access + refresh )
 
     Returns the TokenResponse containing both tokens on success.
@@ -123,22 +132,23 @@ def login_user(db:Session,email:str,password:str) -> TokenResponse:
     exist OR the password is wrong. Returning different messages for each case would let an attacker enumerate
     which emails are registered in our system (user enumeration attack).
     One generic message prevents this.
-      
+
     """
-    user = user_repository.get_by_email(db,email)
+    user = user_repository.get_by_email(db, email)
 
     # Check both conditions before raising - avoids short-circuit timing differences
     # (avoids situation where the program exists early (short circuiting) depending on which check failed first)
     # (by checking both every time together , the reponse takes same time and make it difficult for attackers)
     # that could theoretically leak which branch was taken.
 
-    if not user or not verify_password(password,user.hashed_password):
+    if not user or not verify_password(password, user.hashed_password):
         raise AuthError("Invalid email or password")
 
-    return _create_token_pair(db,user)
+    return _create_token_pair(db, user)
 
-def refresh_user(db:Session,plain_refresh_token:str)-> TokenResponse:
-    """ 
+
+def refresh_user(db: Session, plain_refresh_token: str) -> tuple[TokenResponse, str]:
+    """
     Validate a refresh token and issue a new token pair.
 
     This implements TOKEN ROTATION:
@@ -154,7 +164,7 @@ def refresh_user(db:Session,plain_refresh_token:str)-> TokenResponse:
 
     Validation checks (all must pass):
     1. Token hash exists in the DB (not tampered or fabricated)
-    2. is_revoked is False 
+    2. is_revoked is False
     3. expires_at is in the future (not expired automatically)
 
     Raises AuthError if any check fails.
@@ -162,36 +172,37 @@ def refresh_user(db:Session,plain_refresh_token:str)-> TokenResponse:
     """
 
     token_hash = hash_refresh_token(plain_refresh_token)
-    stored_token = refresh_token_repository.get_by_hash(db,token_hash)
+    stored_token = refresh_token_repository.get_by_hash(db, token_hash)
 
     # Check 1 : Does this hash exist ?
     if not stored_token:
         raise AuthError("Invalid refresh token")
-    
+
     # Check 2 : has it been revoked ? (logout or previous rotation)
     if stored_token.is_revoked:
         # A revoked token being used again is suspicious - could be a reply attack.
-        # Advanced: at this point we could revoke ALL tokens for this user as a 
+        # Advanced: at this point we could revoke ALL tokens for this user as a
         # security measure (logout all devices). We keep it simple here.
         raise AuthError("Refresh token has been revoked")
-    
+
     # Check 3: has it expired naturally?
     if stored_token.expires_at < datetime.now(timezone.utc):
         raise AuthError("Refresh token has expired")
 
     # Load the user this token belongs to
     # db.get(Model,pk) is SQL Alchemy 2.0's primary-key lookup
-    user = db.get(User,stored_token.user_id)
+    user = db.get(User, stored_token.user_id)
     if not user:
         raise AuthError("User not found")
-    
+
     # ROTATE : revoke the old token before issuing a new pair
-    refresh_token_repository.revoke(db,stored_token)
+    refresh_token_repository.revoke(db, stored_token)
 
     # Issue a fresh pair
-    return _create_token_pair(db,user)
+    return _create_token_pair(db, user)
 
-def logout_user(db:Session,plain_refresh_token:str)->None:
+
+def logout_user(db: Session, plain_refresh_token: str) -> None:
     """
     Revoke a refresh token, effectively ending the session.
 
@@ -206,9 +217,9 @@ def logout_user(db:Session,plain_refresh_token:str)->None:
 
     """
     token_hash = hash_refresh_token(plain_refresh_token)
-    stored_token = refresh_token_repository.get_by_hash(db,token_hash)
+    stored_token = refresh_token_repository.get_by_hash(db, token_hash)
 
     if not stored_token or stored_token.is_revoked:
         raise AuthError("Invalid or already revoked token")
-    
-    refresh_token_repository.revoke(db,stored_token)
+
+    refresh_token_repository.revoke(db, stored_token)
